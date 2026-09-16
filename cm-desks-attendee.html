@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Build the Trading Floor Copilot</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+  :root{
+    --bg:#F6F7F9; --surface:#FFFFFF; --surface-2:#F0F2F5;
+    --ink:#1B2027; --muted:#5C6773; --faint:#8A94A0;
+    --border:#E2E7ED; --border-strong:#D2D9E1;
+    --accent:#DC4E2A; --accent-soft:#FBEAE3;
+    --ok:#0E8A6B; --ok-bg:#E7F4EF; --ok-border:#BFE3D5;
+    --trust:#0E7C99; --trust-soft:#EAF5F8; --trust-ink:#0B5566;
+    --gold:#9A6B00; --gold-bg:#FBF0D8;
+    --code-bg:#1C222B; --code-ink:#E9EDF2; --code-faint:#9AA6B4; --code-accent:#F0885F;
+    --shadow:0 1px 2px rgba(20,30,45,.04),0 4px 16px rgba(20,30,45,.05);
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+      --bg:#12161B; --surface:#1A1F27; --surface-2:#20262F;
+      --ink:#EAEEF2; --muted:#9AA6B2; --faint:#6E7A87;
+      --border:#2A313B; --border-strong:#38414D;
+      --accent:#F26A44; --accent-soft:#33221C;
+      --ok:#35B894; --ok-bg:#12271F; --ok-border:#1E4638;
+      --trust:#3AA8C4; --trust-soft:#10262E; --trust-ink:#BFE3EC;
+      --gold:#E8C77A; --gold-bg:#33290F;
+      --code-bg:#0E1217; --code-ink:#E9EDF2; --code-faint:#8A96A4; --code-accent:#F5926C;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 22px rgba(0,0,0,.35);
+  }}
+  :root[data-theme="dark"]{
+      --bg:#12161B; --surface:#1A1F27; --surface-2:#20262F;
+      --ink:#EAEEF2; --muted:#9AA6B2; --faint:#6E7A87;
+      --border:#2A313B; --border-strong:#38414D;
+      --accent:#F26A44; --accent-soft:#33221C;
+      --ok:#35B894; --ok-bg:#12271F; --ok-border:#1E4638;
+      --trust:#3AA8C4; --trust-soft:#10262E; --trust-ink:#BFE3EC;
+      --gold:#E8C77A; --gold-bg:#33290F;
+      --code-bg:#0E1217; --code-ink:#E9EDF2; --code-faint:#8A96A4; --code-accent:#F5926C;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 22px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif; line-height:1.6; margin:0; font-size:16px; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:860px; margin:0 auto; padding:clamp(20px,5vw,56px) clamp(18px,5vw,40px) 72px;}
+  .eyebrow{font-family:"IBM Plex Mono",monospace; font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--accent); font-weight:600;}
+  h1{font-family:"Bricolage Grotesque",sans-serif; font-weight:800; font-size:clamp(2.1rem,6vw,3.2rem); line-height:1.02; letter-spacing:-.02em; margin:.35em 0 .2em; text-wrap:balance;}
+  .lede{font-size:1.08rem; color:var(--muted); max-width:64ch; margin:0 0 1.4em;}
+  .meta{display:flex; flex-wrap:wrap; gap:0; border:1px solid var(--border); border-radius:12px; overflow:hidden; background:var(--surface); box-shadow:var(--shadow);}
+  .meta div{flex:1 1 150px; padding:12px 16px; border-right:1px solid var(--border);}
+  .meta div:last-child{border-right:0;}
+  .meta dt{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint); margin:0 0 3px;}
+  .meta dd{margin:0; font-weight:600; font-size:.94rem;}
+  .callout{margin:24px 0; padding:16px 18px; border:1px solid var(--border-strong); border-left:3px solid var(--accent); border-radius:10px; background:var(--surface); font-size:.94rem; box-shadow:var(--shadow);}
+  .callout strong{color:var(--accent);}
+  .callout code{background:var(--surface-2); padding:.1em .4em; border-radius:5px; font-family:"IBM Plex Mono",monospace; font-size:.86em;}
+  .callout p{margin:.5em 0;} .callout p:first-child{margin-top:0;} .callout p:last-child{margin-bottom:0;}
+
+  /* track navigation */
+  .tracknav{position:sticky; top:0; z-index:5; display:flex; flex-wrap:wrap; gap:8px; padding:12px 0; margin:8px 0 4px; background:linear-gradient(var(--bg),var(--bg) 70%,transparent);}
+  .tracknav a{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.06em; text-transform:uppercase; font-weight:600; text-decoration:none; padding:6px 12px; border-radius:20px; border:1px solid var(--border-strong); color:var(--muted); background:var(--surface);}
+  .tracknav a.adm{border-color:var(--trust); color:var(--trust-ink); background:var(--trust-soft);}
+  .tracknav a:hover{border-color:var(--accent); color:var(--accent);}
+
+  /* track section */
+  .track{margin:40px 0 8px; padding:2px 0 8px; border-top:3px solid var(--accent); scroll-margin-top:64px;}
+  .track.adm{border-top-color:var(--trust);}
+  .trackhead{display:flex; align-items:baseline; gap:12px; margin:14px 0 2px;}
+  .trackhead .tag{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:700; color:#fff; background:var(--accent); border-radius:6px; padding:3px 9px;}
+  .track.adm .trackhead .tag{background:var(--trust);}
+  .trackhead h2{font-family:"Bricolage Grotesque",sans-serif; font-weight:800; font-size:1.7rem; letter-spacing:-.01em; margin:0; border:0; padding:0; text-transform:none; color:var(--ink);}
+  .who{margin:2px 0 0; color:var(--muted); font-size:.92rem;} .who b{color:var(--ink);}
+
+  .step{margin:28px 0 8px; padding-top:6px;}
+  .step-head{display:flex; align-items:baseline; gap:14px; margin-bottom:2px;}
+  .num{font-family:"Bricolage Grotesque",sans-serif; font-weight:800; font-size:1.3rem; color:var(--accent); line-height:1; min-width:2.4ch;}
+  .track.adm .num{color:var(--trust);}
+  .step-title{font-family:"Bricolage Grotesque",sans-serif; font-weight:700; font-size:1.24rem; letter-spacing:-.01em; margin:0; line-height:1.15;}
+  .where{margin:2px 0 0 calc(2.4ch + 14px); color:var(--muted); font-size:.9rem;} .where b{color:var(--ink); font-weight:600;}
+  .prompt{margin:14px 0; border-radius:12px; overflow:hidden; background:var(--code-bg); box-shadow:var(--shadow);}
+  .prompt-bar{display:flex; align-items:center; justify-content:space-between; padding:9px 14px; background:rgba(255,255,255,.04); border-bottom:1px solid rgba(255,255,255,.07);}
+  .prompt-label{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--code-accent); font-weight:600;}
+  .copy{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--code-faint); background:transparent; border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:4px 10px; cursor:pointer;}
+  .copy:hover{color:var(--code-ink); border-color:rgba(255,255,255,.3);}
+  .prompt pre{margin:0; padding:15px 16px; overflow-x:auto; color:var(--code-ink); font-family:"IBM Plex Mono",monospace; font-size:12.5px; line-height:1.6; white-space:pre-wrap; word-break:break-word;}
+  details.pathb{margin:8px 0 4px; border:1px solid var(--border-strong); border-radius:10px; overflow:hidden; background:var(--surface);}
+  details.pathb>summary{cursor:pointer; list-style:none; padding:9px 14px; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--trust-ink); background:var(--trust-soft); font-weight:600;}
+  details.pathb>summary::-webkit-details-marker{display:none;}
+  details.pathb>summary::before{content:"▸  "; color:var(--trust);}
+  details.pathb[open]>summary::before{content:"▾  ";}
+  details.pathb pre{margin:0; padding:13px 16px; overflow-x:auto; background:var(--code-bg); color:var(--code-ink); font-family:"IBM Plex Mono",monospace; font-size:12px; line-height:1.55; white-space:pre-wrap; word-break:break-word;}
+  details.pathb pre .cmt{color:var(--code-faint);}
+  .expect{margin:12px 0 4px; border:1px solid var(--ok-border); background:var(--ok-bg); border-radius:10px; padding:13px 16px 13px 42px; position:relative; font-size:.92rem;}
+  .expect::before{content:"✓"; position:absolute; left:15px; top:12px; width:18px; height:18px; line-height:18px; text-align:center; border-radius:50%; background:var(--ok); color:#fff; font-size:12px; font-weight:700;}
+  .expect .lab{display:block; font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ok); font-weight:600; margin-bottom:3px;}
+  .expect b{color:var(--ink); font-variant-numeric:tabular-nums;} .expect code{font-family:"IBM Plex Mono",monospace; font-size:.86em; background:var(--surface); padding:.05em .35em; border-radius:5px;}
+  .handoff{margin:16px 0 4px; border:1px solid var(--border-strong); border-left:3px solid var(--gold); background:var(--gold-bg); border-radius:10px; padding:13px 16px; font-size:.9rem;}
+  .handoff .lab{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--gold); font-weight:700; display:block; margin-bottom:4px;}
+  .handoff code{font-family:"IBM Plex Mono",monospace; font-size:.85em; background:var(--surface); padding:.05em .35em; border-radius:5px;}
+  .note{font-size:.86rem; color:var(--muted); margin:8px 0 0 2px;} .note b{color:var(--ink);} .note code{font-family:"IBM Plex Mono",monospace; font-size:.85em; background:var(--surface-2); padding:.06em .36em; border-radius:5px;}
+  figure.diagram{margin:22px 0 6px;}
+  .figbox{border:1px solid var(--border); border-radius:14px; background:var(--surface); box-shadow:var(--shadow); padding:14px 12px; overflow-x:auto;}
+  .figbox svg{display:block; width:100%; min-width:760px; height:auto;}
+  figcaption{font-size:.86rem; color:var(--muted); margin:12px 2px 0; line-height:1.55;} figcaption b{color:var(--ink);}
+  .sw{display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:baseline; margin:0 2px -1px 0;}
+  .sw-a{background:var(--accent);} .sw-t{background:var(--trust);}
+  hr.soft{border:0; border-top:1px solid var(--border); margin:34px 0;}
+  footer{margin-top:14px; font-size:.85rem; color:var(--faint);} footer code{font-family:"IBM Plex Mono",monospace;}
+  a{color:var(--accent);}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow">Capital Markets · hands-on lab</div>
+  <h1>Build the Trading&nbsp;Floor Copilot</h1>
+  <p class="lede">Three desks build in parallel — each group follows <b>only its own track</b> to build a governed data product and a desk agent. Then the <b>Admin</b> track pieces them together into one firm-wide copilot, applies the cross-desk governance, and runs the reveal. Every step shows <b>both surfaces</b> — a Genie Code prompt (Path A) and the equivalent code/notebook (Path B) — so each group builds the way it prefers.</p>
+
+  <dl class="meta">
+    <div><dt>Groups</dt><dd>3 desks, in parallel</dd></div>
+    <div><dt>Then</dt><dd>1 Admin integration track</dd></div>
+    <div><dt>Install</dt><dd>None (workspace-native)</dd></div>
+    <div><dt>Hero</dt><dd>Oil drops → Air Canada</dd></div>
+  </dl>
+
+  <nav class="tracknav">
+    <a href="#setup">Setup</a>
+    <a href="#deskA">Desk A · Portfolio</a>
+    <a href="#deskB">Desk B · Research</a>
+    <a href="#deskC">Desk C · Market</a>
+    <a href="#admin" class="adm">Admin · Integration</a>
+  </nav>
+
+  <figure class="diagram">
+    <div class="figbox">
+      <svg viewBox="0 0 900 640" role="img" aria-label="Two-tier diagram. Three desk agents — Portfolio and Exposure, Research and Filings, Market Intelligence — each own their own tools and data product. The Admin track wires them into two shared front doors: Genie One (broad rank-based discovery) and the Capital Markets Copilot (a supervisor-of-supervisors). A governance band — ABAC masks, chinese-wall row filters, and MLflow traces — wraps everything, and each desk is bounded by a Discover domain.">
+        <defs>
+          <marker id="ah-a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker>
+          <marker id="ah-t" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--trust)"/></marker>
+        </defs>
+        <rect x="14" y="60" width="872" height="540" rx="18" fill="var(--trust-soft)" stroke="var(--trust)" stroke-width="1.6"/>
+        <rect x="150" y="46" width="600" height="28" rx="14" fill="var(--trust)"/>
+        <text x="450" y="64" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="500" fill="#F2FAFC" letter-spacing="0.05em">ADMIN WIRES THIS BAND — UNITY CATALOG GOVERNANCE · MLFLOW TRACES</text>
+        <text x="450" y="96" text-anchor="middle" font-family="IBM Plex Sans, sans-serif" font-size="12" fill="var(--trust-ink)">ABAC masks · chinese-wall row filters that follow the data · every agent call traced</text>
+        <text x="46" y="128" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--faint)" letter-spacing="0.12em">SHARED FRONT DOORS — built by Admin</text>
+        <rect x="150" y="134" width="270" height="52" rx="12" fill="var(--surface)" stroke="var(--trust)" stroke-width="1.5" stroke-dasharray="5 4"/>
+        <text x="285" y="156" text-anchor="middle" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="14" fill="var(--ink)">Genie One</text>
+        <text x="285" y="174" text-anchor="middle" font-size="10.5" fill="var(--muted)">broad rank-based discovery (OntoRank)</text>
+        <rect x="450" y="134" width="300" height="52" rx="12" fill="var(--surface)" stroke="var(--accent)" stroke-width="2"/>
+        <text x="600" y="156" text-anchor="middle" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="14" fill="var(--ink)">Capital Markets Copilot</text>
+        <text x="600" y="174" text-anchor="middle" font-size="10.5" fill="var(--muted)">supervisor-of-supervisors · deterministic</text>
+        <line x1="500" y1="186" x2="200" y2="236" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#ah-a)"/>
+        <line x1="600" y1="186" x2="450" y2="236" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#ah-a)"/>
+        <line x1="700" y1="186" x2="700" y2="236" stroke="var(--accent)" stroke-width="1.8" marker-end="url(#ah-a)"/>
+        <text x="46" y="224" font-family="IBM Plex Mono, monospace" font-size="10.5" fill="var(--faint)" letter-spacing="0.12em">DESKS — each group builds its own track</text>
+        <g font-family="IBM Plex Sans, sans-serif">
+          <rect x="40" y="238" width="262" height="118" rx="11" fill="var(--surface)" stroke="var(--border-strong)" stroke-width="1.3"/>
+          <text x="171" y="264" text-anchor="middle" font-weight="700" font-size="13.5" fill="var(--ink)" font-family="Bricolage Grotesque, sans-serif">A · Portfolio &amp; Exposure</text>
+          <text x="171" y="285" text-anchor="middle" font-size="10.5" fill="var(--muted)">Genie space · exposure_kpis metric view</text>
+          <text x="171" y="302" text-anchor="middle" font-size="10.5" fill="var(--muted)">get_client_positions · compute_shock_pnl</text>
+          <text x="171" y="342" text-anchor="middle" font-size="10" fill="var(--accent)" font-family="IBM Plex Mono, monospace">Portfolio Desk Agent</text>
+          <rect x="319" y="238" width="262" height="118" rx="11" fill="var(--surface)" stroke="var(--border-strong)" stroke-width="1.3"/>
+          <text x="450" y="264" text-anchor="middle" font-weight="700" font-size="13.5" fill="var(--ink)" font-family="Bricolage Grotesque, sans-serif">B · Research &amp; Filings</text>
+          <text x="450" y="285" text-anchor="middle" font-size="10.5" fill="var(--muted)">Knowledge Assistant (vectorized)</text>
+          <text x="450" y="302" text-anchor="middle" font-size="10.5" fill="var(--muted)">get_filing_facts · SEC EDGAR MCP</text>
+          <text x="450" y="342" text-anchor="middle" font-size="10" fill="var(--accent)" font-family="IBM Plex Mono, monospace">Research Desk Agent</text>
+          <rect x="598" y="238" width="262" height="118" rx="11" fill="var(--surface)" stroke="var(--border-strong)" stroke-width="1.3"/>
+          <text x="729" y="264" text-anchor="middle" font-weight="700" font-size="13.5" fill="var(--ink)" font-family="Bricolage Grotesque, sans-serif">C · Market Intelligence</text>
+          <text x="729" y="285" text-anchor="middle" font-size="10.5" fill="var(--muted)">Genie space · news &amp; signals</text>
+          <text x="729" y="302" text-anchor="middle" font-size="10.5" fill="var(--muted)">get_client_signals · GDELT MCP</text>
+          <text x="729" y="342" text-anchor="middle" font-size="10" fill="var(--accent)" font-family="IBM Plex Mono, monospace">Market Intel Desk Agent</text>
+        </g>
+        <line x1="171" y1="356" x2="171" y2="424" stroke="var(--trust)" stroke-width="1.8" marker-end="url(#ah-t)"/>
+        <line x1="450" y1="356" x2="450" y2="424" stroke="var(--trust)" stroke-width="1.8" marker-end="url(#ah-t)"/>
+        <line x1="729" y1="356" x2="729" y2="424" stroke="var(--trust)" stroke-width="1.8" marker-end="url(#ah-t)"/>
+        <text x="512" y="402" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" fill="var(--trust)">grounded on</text>
+        <rect x="40" y="426" width="820" height="86" rx="12" fill="var(--trust)"/>
+        <text x="450" y="454" text-anchor="middle" font-family="Bricolage Grotesque, sans-serif" font-weight="700" font-size="16" fill="#F3FAFC">Governed gold — Unity Catalog</text>
+        <text x="450" y="476" text-anchor="middle" font-size="12" fill="#CDE6EC">cm_portfolio_gold · cm_research_gold · cm_market_gold · certified metric views · masked + row-filtered</text>
+        <text x="450" y="496" text-anchor="middle" font-size="11.5" fill="#CDE6EC">one shared capital-markets seed — it never leaves your environment</text>
+        <text x="450" y="540" text-anchor="middle" font-size="12.5" fill="var(--muted)">Each desk is bounded by a <tspan font-weight="600" fill="var(--ink)">Discover domain</tspan> — the data-product boundary, and a Genie One discovery signal.</text>
+        <text x="450" y="562" text-anchor="middle" font-size="12.5" fill="var(--muted)">Desks build the boxes; <tspan font-weight="600" fill="var(--ink)">Admin</tspan> wires the two front doors and the governance band.</text>
+      </svg>
+    </div>
+    <figcaption>Read it as your job map: your group builds one <span class="sw sw-a"></span><b>desk box</b> and its agent; <span class="sw sw-t"></span><b>Admin</b> builds the governed slab, the two front doors, and the band. Desk tracks run at the same time; Admin runs after every desk hands off its IDs.</figcaption>
+  </figure>
+
+  <div class="callout"><p><strong>How to run this.</strong> Assign one group per desk (A/B/C). Each group does <em>only</em> its track, end-to-end, and records its <b>hand-off IDs</b> at the end. When all three are done, the Admin (facilitator, or a fourth group) runs the Admin track using those IDs. Placeholders: <code>&lt;catalog&gt;</code> is your catalog; all desks share the seed's <code>catalog</code> + <code>schema_prefix</code>, and desk <i>product</i> schemas (<code>cm_portfolio_gold</code>, etc.) are fixed names.</p>
+  <p><strong>Before you start (facilitator).</strong> The workspace needs: Unity Catalog + a serverless SQL warehouse; Foundation Model APIs (<code>databricks-claude-haiku-4-5</code>) with AI features on; <b>Agent Bricks</b> (Knowledge Assistant + Multi-Agent Supervisor); <b>Genie</b> + <b>Genie One</b> (chat/routing is Public Preview — enroll); <b>Discover domains</b> (Public Preview); and account groups <code>cm_privileged</code> / <code>cm_all_access</code> for the rating mask. Full list in <code>FACILITATOR.md</code>.</p>
+  <p><strong>Driving Genie Code.</strong> Start a <b>fresh Genie Code chat for each step</b> — it keeps context small. Let it plan and run end-to-end; <b>don't</b> tell it to "confirm" or "approve." Its tools follow the <b>open surface</b>, so be on the right page first: the <b>Genie</b> surface for spaces, the <b>Agent Bricks</b> skill for the KA / desk agents / Copilot (Genie Code upgrades the SDK itself — this can take several retries and may fall back to the CLI; let it run, don't nudge it), and keep <b>Discover</b> open for the domain step (D2). Prefer the code/notebook path? Each step has a matching Path-B script in the repo.</p></div>
+
+  <!-- ===================== SETUP ===================== -->
+  <div class="track adm" id="setup">
+    <div class="trackhead"><span class="tag">Setup</span><h2>Seed the shared world</h2></div>
+    <p class="who"><b>Who:</b> Admin / facilitator, once, before desks start.</p>
+
+    <div class="step"><div class="step-head"><span class="num">0</span><h3 class="step-title">Generate (or confirm) the capital-markets seed</h3></div>
+    <div class="where">Run <code>data/01_generate_seed.py</code> with your <code>catalog</code> and <code>schema_prefix</code> — or confirm an existing seed.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Run the notebook data/01_generate_seed.py to build the shared seed, then show row counts for clients, positions, research_notes, filing_facts and news_events_tagged, and confirm Air Canada is net-long WTI.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre><span class="cmt"># serverless job; catalog + schema_prefix are the two widgets every desk reuses</span>
+databricks jobs submit --json '{"run_name":"seed","tasks":[{"task_key":"seed",
+  "notebook_task":{"notebook_path":".../data/01_generate_seed",
+  "base_parameters":{"catalog":"&lt;cat&gt;","schema_prefix":"&lt;prefix&gt;"}}}]}'</pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> 9 clients (each with a coverage officer), positions present, and Air Canada <b>net-long WTI</b> — the hero: if oil drops, AC's hedge loses value.</div>
+    <p class="note">The seed's <code>catalog</code> and <code>schema_prefix</code> widgets are the workshop's two knobs — <b>every Path-B notebook takes the same two</b> (<code>catalog</code>, <code>schema_prefix</code>) so the desks read the seed you generated. Keep <code>schema_prefix</code> identical across the seed and all desks; desk <i>product</i> schemas (<code>cm_portfolio_gold</code>, etc.) are fixed.</p>
+  </div>
+
+  <!-- ===================== DESK A ===================== -->
+  <div class="track" id="deskA">
+    <div class="trackhead"><span class="tag">Desk A</span><h2>Portfolio &amp; Exposure</h2></div>
+    <p class="who"><b>Who:</b> the Portfolio group. <b>You build:</b> a certified gold product, a metric view, two functions, a Genie space, and the Portfolio Desk Agent.</p>
+
+    <div class="step"><div class="step-head"><span class="num">A1</span><h3 class="step-title">Gold product + semantic layer</h3></div>
+    <div class="where">Certified views + a metric view — its named measures are the top signal Genie One ranks on.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>In &lt;catalog&gt;, create cm_portfolio_gold with a certified positions view (join the seed's &lt;schema_prefix&gt;_silver.positions to clients for sector + coverage_officer, and to instruments for asset_class) and a certified clients view. Then a metric view cm_portfolio_metrics.exposure_kpis with dimensions Client, Ticker, Sector, Desk, Currency, Asset Class, Coverage Officer and measures Gross Notional CAD, Net Exposure CAD, Unrealized PnL CAD, Position Count, Client Count. Certify everything by setting the system.certification_status tag to certified (not a custom tag).</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre><span class="cmt"># notebooks; widgets: catalog, schema_prefix</span>
+desk1_portfolio/01_gold_views.py     <span class="cmt"># certified positions + clients views</span>
+desk1_portfolio/02_metric_view.py    <span class="cmt"># exposure_kpis metric view — asserts MEASURE() ties to raw</span></pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> <code>MEASURE(`Gross Notional CAD`)</code> by sector ties to raw — <b>Energy leads</b> (≈ CAD 1.6B on the reference generator seed; the exact figure is seed-dependent).</div>
+
+    <div class="step"><div class="step-head"><span class="num">A2</span><h3 class="step-title">Function tools + Genie space</h3></div>
+    <div class="where">Two UC functions and a Genie space with a deliberately-written description.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Create UC table functions get_client_positions(p_client_id) and compute_shock_pnl(p_client_id, p_instrument_id, p_shock_pct) — compute PnL impact as net_qty × (spot_price × p_shock_pct/100) × the instrument's contract_size × its CAD FX rate (join &lt;schema_prefix&gt;_silver.instruments for contract_size and native currency; do NOT use net_exposure alone or the hero number will be off by ~1000×). Then build a Genie space "Portfolio &amp; Exposure" over the metric view and positions view, described for exposure / notional / PnL / which clients hold an instrument, with a sample question "gross notional by sector".</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre>desk1_portfolio/03_uc_functions.py   <span class="cmt"># get_client_positions, compute_shock_pnl</span>
+python desk1_portfolio/04_genie_space.py --catalog &lt;cat&gt; --warehouse-id &lt;wh&gt;
+databricks api post /api/2.0/genie/spaces --json @/tmp/create_portfolio_space.json</pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> <code>compute_shock_pnl('CL-AC','WTI',-10)</code> → <b>≈ −CAD 1.6M</b> (the hero WTI position is hard-seeded, so this reproduces); the Genie space answers "gross notional by sector" with <code>MEASURE()</code> SQL.</div>
+
+    <div class="step"><div class="step-head"><span class="num">A3</span><h3 class="step-title">Portfolio Desk Agent (+ MCP)</h3></div>
+    <div class="where">Compose your tools into one shareable desk agent. Your functions are also exposed as managed MCP for free.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Build a Supervisor Agent "Portfolio Desk Agent" with three tools: the Portfolio &amp; Exposure Genie space, get_client_positions, and compute_shock_pnl. Then show me the managed-MCP URL for my UC functions.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre>python desk1_portfolio/06_desk_agent.py --profile &lt;prof&gt; --catalog &lt;cat&gt; \
+  --genie-space-id &lt;portfolio_space_id&gt;
+<span class="cmt"># managed MCP is automatic: /api/2.0/mcp/functions/&lt;cat&gt;/cm_portfolio_gold</span></pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> Ask it "PnL if WTI drops 10% for Air Canada, and show its book" → both tools fire in one turn (≈ −CAD 1.6M + the 8-position book). Managed MCP URL: <code>/api/2.0/mcp/functions/&lt;catalog&gt;/cm_portfolio_gold</code>.</div>
+
+    <div class="handoff"><span class="lab">Hand off to Admin</span> Record and give the Admin: your <b>Genie space id</b>, and your <b>Portfolio Desk Agent</b> — its <code>supervisor_agent_id</code> and endpoint (<code>mas-…-endpoint</code>). Confirm your gold tables are <b>certified</b>.</div>
+  </div>
+
+  <!-- ===================== DESK B ===================== -->
+  <div class="track" id="deskB">
+    <div class="trackhead"><span class="tag">Desk B</span><h2>Research &amp; Filings</h2></div>
+    <p class="who"><b>Who:</b> the Research group. <b>You build:</b> a vectorized research corpus (Knowledge Assistant), a filing-facts function, and the Research Desk Agent.</p>
+
+    <div class="step"><div class="step-head"><span class="num">B1</span><h3 class="step-title">Vectorize the research corpus (Knowledge Assistant)</h3></div>
+    <div class="where">A Delta table with a <code>content</code> column + <code>_metadata</code> struct + CDF is a valid KA source — no Volume staging.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Create cm_research_gold.research_docs from the seed's &lt;schema_prefix&gt;_silver.research_notes in the KA file-table shape (a content column of title + body, and a _metadata struct of file_path, file_name, file_size, file_modification_time), CDF on; certify it via the system.certification_status tag. Then create a Knowledge Assistant over it that answers analyst house-view and hedging questions with citations.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre>desk2_research/01_research_corpus.py   <span class="cmt"># research_docs: content + _metadata + CDF, certified</span>
+python desk2_research/03_knowledge_assistant.py --profile &lt;prof&gt; --catalog &lt;cat&gt;
+<span class="cmt"># KA vector index syncs in the background (15–30+ min)</span></pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> The KA index syncs in the background (<code>UPDATING → UPDATED</code>) — <b>allow 15–30+ min</b>, workspace-dependent. Don't gate the demo on it: the hero fuel-hedge policy flows through the deterministic <code>get_filing_facts</code> (B2) meanwhile. Once ready, "analyst view on Air Canada fuel hedging" returns a grounded, cited answer.</div>
+
+    <div class="step"><div class="step-head"><span class="num">B2</span><h3 class="step-title">Filing facts + Research Desk Agent (+ MCP)</h3></div>
+    <div class="where">A deterministic filing-facts function beside the KA; compose both. Public SEC EDGAR MCP optional.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Create get_filing_facts(p_client_id, p_fact_type) over filing_facts. Then build a Supervisor Agent "Research Desk Agent" with two tools — the research Knowledge Assistant and get_filing_facts — using the KA for narrative house views and get_filing_facts for exact policy numbers.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre>desk2_research/02_uc_function.py   <span class="cmt"># get_filing_facts</span>
+python desk2_research/06_desk_agent.py --profile &lt;prof&gt; --catalog &lt;cat&gt; \
+  --ka-id &lt;ka_id&gt; --ka-endpoint &lt;ka_endpoint&gt;</pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> "House view on AC fuel hedging + the exact policy" → KA narrative <b>plus</b> the real <b>75% / 50% / 25%</b> jet-fuel hedge limits with source pages.</div>
+
+    <div class="handoff"><span class="lab">Hand off to Admin</span> Give the Admin: your <b>Research Desk Agent</b> <code>supervisor_agent_id</code> + endpoint, your <b>KA endpoint</b> (<code>ka-…-endpoint</code>), and confirm <code>research_docs</code> is certified. <b>Note:</b> a KA index is a snapshot and won't enforce per-user row filters — flag it so Admin scopes the wall on structured paths.</div>
+  </div>
+
+  <!-- ===================== DESK C ===================== -->
+  <div class="track" id="deskC">
+    <div class="trackhead"><span class="tag">Desk C</span><h2>Market Intelligence</h2></div>
+    <p class="who"><b>Who:</b> the Market Intel group. <b>You build:</b> certified news + signal views, a signal function, a Genie space, and the Market Intel Desk Agent.</p>
+
+    <div class="step"><div class="step-head"><span class="num">C1</span><h3 class="step-title">News gold, signal function &amp; Genie space</h3></div>
+    <div class="where">Tagged news + client signal matches, exposed via a Genie space and a function.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>In cm_market_gold, create views news_events and signal_matches from the seed's &lt;schema_prefix&gt;_silver / _gold (join client_signal_matches to headlines and client names), certified via the system.certification_status tag, and get_client_signals(p_client_id). Then build a Genie space "Market Intelligence" over both views for sentiment, adverse media, and which clients are exposed to a market event.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre>desk3_market/01_gold_and_function.py   <span class="cmt"># news_events + signal_matches views, get_client_signals</span>
+python desk3_market/04_genie_space.py --catalog &lt;cat&gt; --warehouse-id &lt;wh&gt;
+databricks api post /api/2.0/genie/spaces --json @/tmp/create_market_space.json</pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> "Which clients are exposed to oil (WTI) news?" → the energy/airline names with a bearish-dominant sentiment breakdown.</div>
+
+    <div class="step"><div class="step-head"><span class="num">C2</span><h3 class="step-title">Market Intel Desk Agent (+ MCP)</h3></div>
+    <div class="where">Genie + function → your desk agent. Public GDELT/Scout MCP optional.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Build a Supervisor Agent "Market Intel Desk Agent" with the Market Intelligence Genie space and get_client_signals as tools.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre>python desk3_market/06_desk_agent.py --profile &lt;prof&gt; --catalog &lt;cat&gt; \
+  --genie-space-id &lt;market_space_id&gt;</pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> It answers "what news is Air Canada exposed to?" via get_client_signals (WTI / USDCAD signals with sentiment).</div>
+
+    <div class="handoff"><span class="lab">Hand off to Admin</span> Give the Admin: your <b>Market Intel Desk Agent</b> <code>supervisor_agent_id</code> + endpoint, your <b>Genie space id</b>, and confirm your views are certified.</div>
+  </div>
+
+  <!-- ===================== ADMIN ===================== -->
+  <div class="track adm" id="admin">
+    <div class="trackhead"><span class="tag">Admin</span><h2>Integration — piece it together</h2></div>
+    <p class="who"><b>Who:</b> Admin / facilitator, after all three desks hand off their IDs. <b>You build:</b> the cross-desk governance, the firm-wide Copilot, Genie One discovery, and the reveal.</p>
+
+    <div class="step"><div class="step-head"><span class="num">D1</span><h3 class="step-title">Cross-desk governance — mask + chinese-wall</h3></div>
+    <div class="where">One shared wall across every desk's data — it follows the data through Genie, functions, and the agents.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Create a cm_governance schema. Add a column mask on clients.credit_rating returning *** unless the caller is in cm_privileged. Add a chinese-wall: a coverage_acl table mapping user → coverage officer, and row-filter functions so a user sees only clients whose coverage officer maps to them. Apply the filter to all three desks' assets: cm_portfolio_gold.clients and positions, cm_research_gold.research_docs, and cm_market_gold.signal_matches.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre>governance/01_abac_and_rls.py   <span class="cmt"># widgets: catalog, schema_prefix</span>
+<span class="cmt"># mask_rating (needs account group cm_privileged) + coverage_acl chinese-wall;</span>
+<span class="cmt"># SET MASK / SET ROW FILTER applied across all three desks' assets</span></pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> A user scoped to one coverage officer (e.g. "Sofia" → AC, MG) sees <b>only those clients</b> across all three desks; <code>credit_rating</code> shows <code>***</code> for non-privileged callers.</div>
+    <p class="note"><b>Account-admin prerequisite for the mask:</b> <code>credit_rating</code> masking keys off <code>is_account_group_member('cm_privileged')</code>, which only recognizes <b>account groups</b>. Have an account admin create account groups <code>cm_privileged</code> and <code>cm_all_access</code> and add the desk-head demo user to <code>cm_privileged</code> before the reveal — otherwise the rating masks to <code>***</code> for everyone. The chinese-wall row filter needs no groups (it uses <code>coverage_acl</code> + <code>current_user()</code>).</p>
+
+    <div class="step"><div class="step-head"><span class="num">D2</span><h3 class="step-title">Discover domains — one per desk</h3></div>
+    <div class="where">Bound each desk's product as a governed domain (also a Genie One discovery signal).</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Create three Discover domains — "CM Portfolio and Exposure", "CM Research and Filings", "CM Market Intelligence" — and tag each desk's tables, metric view, and functions into its domain.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre><span class="cmt"># federation/02_domains_and_genie_one.md — per desk (Discover open if driven via Genie Code):</span>
+databricks api post /api/2.1/tag-policies --json '{"tag_key":"CM Portfolio and Exposure","values":[{"name":"true"}]}'
+databricks api post /api/2.0/domains       --json '{"tag_key":"CM Portfolio and Exposure","display_name":"CM Portfolio and Exposure","owner_ids":[&lt;uid&gt;]}'
+ALTER TABLE &lt;cat&gt;.cm_portfolio_gold.clients SET TAGS ('CM Portfolio and Exposure'='true');</pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> Each desk's assets appear under its domain in Discover.</div>
+
+    <div class="step"><div class="step-head"><span class="num">D3</span><h3 class="step-title">Capital Markets Copilot (supervisor-of-supervisors)</h3></div>
+    <div class="where">Register the three desk agents — using the <code>supervisor_agent_id</code>s the desks handed you.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Genie Code</span><button class="copy">Copy</button></div><pre>Build a Supervisor Agent "Capital Markets Copilot" that registers the Portfolio, Research, and Market Intel desk agents as supervisor_agent sub-agent tools (I will give you their supervisor_agent_ids). Instruct it to route to the right desk, and to call multiple desks and synthesize when a question spans them.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre>python federation/01_copilot_supervisor_of_supervisors.py --profile &lt;prof&gt; \
+  --portfolio-sid &lt;..&gt; --research-sid &lt;..&gt; --market-sid &lt;..&gt;
+<span class="cmt"># registers each desk MAS as a supervisor_agent sub-agent (raw REST; SDK Tool lacks the field)</span></pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> "For Air Canada: oil exposure &amp; PnL if WTI drops 10%, and the house view on fuel hedging" → the Copilot calls the <b>Portfolio</b> desk (≈ −CAD 1.6M) <b>and</b> the <b>Research</b> desk (75/50/25 policy + house view) and synthesizes.</div>
+
+    <div class="step"><div class="step-head"><span class="num">D4</span><h3 class="step-title">Genie One + the persona reveal</h3></div>
+    <div class="where">The certified desk spaces are already discoverable in Genie One. Now show governance in action.</div></div>
+    <div class="prompt"><div class="prompt-bar"><span class="prompt-label">Try it — two identities</span><button class="copy">Copy</button></div><pre>Ask the Copilot the same cross-desk Air Canada question as a full-access desk head, then as a user scoped to a single coverage officer. Then open the MLflow trace for the run to show the Copilot → desk agent → tool span tree.</pre></div>
+    <details class="pathb"><summary>Path B — code</summary><pre><span class="cmt"># scope a user, then invoke — the chinese-wall follows through the agent (OBO)</span>
+DELETE FROM &lt;cat&gt;.cm_governance.coverage_acl WHERE user_email='&lt;user&gt;';
+INSERT INTO &lt;cat&gt;.cm_governance.coverage_acl VALUES ('&lt;user&gt;','Sofia Martins');
+python tools/invoke_agent.py &lt;copilot-endpoint&gt; "AC oil exposure + house view" --profile &lt;prof&gt;
+<span class="cmt"># MLflow traces auto-log on the mas-/ka- endpoints</span></pre></details>
+    <div class="expect"><span class="lab">Checkpoint</span> Same question, two logins, <b>different governed answers</b> — the chinese-wall follows the data through every hop; the trace shows the two-level routing.</div>
+
+    <div class="callout"><p><strong>Honest notes.</strong> Genie One is GA but its routing is Public Preview, and Genie&nbsp;+&nbsp;KA composition inside Genie One is Private Preview — the <b>Copilot</b> is the reliable path for structured&nbsp;+&nbsp;unstructured composition. External MCP&nbsp;→&nbsp;Unity Catalog is Public Preview; managed MCP and custom-App MCP are GA.</p></div>
+  </div>
+
+  <hr class="soft">
+  <footer>
+    Each track has a matching notebook path (Path B) in the repo: <code>desk1_portfolio/</code>, <code>desk2_research/</code>, <code>desk3_market/</code>, <code>governance/</code>, <code>federation/</code>. Seed is generated or public (SEC EDGAR, GDELT) — swap <code>&lt;catalog&gt;</code> to reproduce. Hero thread: oil&nbsp;↓&nbsp;→&nbsp;Air&nbsp;Canada fuel&nbsp;hedge.
+  </footer>
+
+</div>
+<script>
+  document.querySelectorAll('.copy').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var pre = btn.closest('.prompt').querySelector('pre');
+      var text = pre ? pre.innerText : '';
+      var done = function(){ var o=btn.textContent; btn.textContent='Copied'; setTimeout(function(){btn.textContent=o;},1400); };
+      function fallback(t){ var ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); }
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done).catch(function(){ fallback(text); done(); }); }
+      else { fallback(text); done(); }
+    });
+  });
+</script>
+</body>
+</html>

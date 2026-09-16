@@ -1,0 +1,22 @@
+# OS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# Env / secrets
+.env
+*.env
+.databrickscfg
+
+# Node (for any attendee-lab tooling later)
+node_modules/
+
+# Data artifacts (regenerate via generators)
+*.pdf
+data/**/*.parquet
+data/**/*.csv

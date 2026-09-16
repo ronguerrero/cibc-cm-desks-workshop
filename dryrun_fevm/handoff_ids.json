@@ -1,0 +1,20 @@
+{
+  "ka_id": "8ed07581-7e3a-41c9-adf4-9cd46e85836b",
+  "ka_endpoint": "ka-8ed07581-endpoint",
+  "portfolio": {
+    "sid": "83e9bb8c-4fc7-4565-897a-a0bf67319b7b",
+    "endpoint": "mas-83e9bb8c-endpoint"
+  },
+  "research": {
+    "sid": "90cd2354-4e28-4bae-abbb-191827f19017",
+    "endpoint": "mas-90cd2354-endpoint"
+  },
+  "market": {
+    "sid": "b160d747-2069-43cb-8d11-2f2fa18eab0f",
+    "endpoint": "mas-b160d747-endpoint"
+  },
+  "copilot": {
+    "sid": "ad906c99-368d-410e-aa6b-84fef88c4ff9",
+    "endpoint": "mas-ad906c99-endpoint"
+  }
+}
